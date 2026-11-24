@@ -127,6 +127,7 @@ class GvmBleClient:
         name: str = "GVM 800D RGB",
         on_handshake: Callable[[dict[str, Any]], None] | None = None,
         on_state: Callable[[dict[str, Any]], None] | None = None,
+        on_disconnect: Callable[[], None] | None = None,
         connect_factory: Callable[[], Awaitable[BleakClient]] | None = None,
     ) -> None:
         """Initialize the client."""
@@ -135,9 +136,11 @@ class GvmBleClient:
         self._name = name
         self._on_handshake = on_handshake
         self._on_state = on_state
+        self._on_disconnect = on_disconnect
         self._connect_factory = connect_factory or self._async_establish_connection
         self._client: BleakClient | None = None
         self._connected = False
+        self._intentional_disconnect = False
         self._device_id = "00"
         self._device_type = "31"
         self._write_lock = asyncio.Lock()
@@ -149,6 +152,7 @@ class GvmBleClient:
 
     async def async_connect(self) -> None:
         """Connect, subscribe to notifications, and send the handshake query."""
+        self._intentional_disconnect = False
         self._client = await self._connect_factory()
         await self._client.start_notify(
             CHARACTERISTIC_UUID, self._handle_notification
@@ -175,11 +179,21 @@ class GvmBleClient:
             BleakClientWithServiceCache,
             device,
             self._name,
+            disconnected_callback=self._handle_disconnect,
             max_attempts=3,
         )
 
+    def _handle_disconnect(self, _client: BleakClient) -> None:
+        """Handle an unexpected BLE disconnection."""
+        self._connected = False
+        if self._intentional_disconnect:
+            return
+        if self._on_disconnect is not None:
+            self._on_disconnect()
+
     async def async_disconnect(self) -> None:
         """Disconnect from the light."""
+        self._intentional_disconnect = True
         self._connected = False
         if self._client is not None:
             await self._client.disconnect()

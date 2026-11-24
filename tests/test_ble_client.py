@@ -119,7 +119,13 @@ async def test_connect_uses_ha_retry_connector(monkeypatch):
     )
     monkeypatch.setattr(ble_module, "establish_connection", fake_establish_connection)
 
-    client = GvmBleClient(MAC, hass=SimpleNamespace(), name="BT_LED")
+    disconnects = []
+    client = GvmBleClient(
+        MAC,
+        hass=SimpleNamespace(),
+        name="BT_LED",
+        on_disconnect=lambda: disconnects.append(True),
+    )
     await client.async_connect()
 
     assert calls["client_class"] is BleakClientWithServiceCache
@@ -128,3 +134,8 @@ async def test_connect_uses_ha_retry_connector(monkeypatch):
     assert calls["kwargs"]["max_attempts"] == 3
     assert fake_client.connect_calls == 0
     assert fake_client.writes == [frame_bytes("4C5409000053000001009474")]
+
+    callback = calls["kwargs"]["disconnected_callback"]
+    callback(fake_client)
+    assert client.connected is False
+    assert disconnects == [True]

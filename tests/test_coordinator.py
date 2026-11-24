@@ -128,10 +128,11 @@ def test_default_client_receives_hass_and_name(monkeypatch):
     captured = {}
 
     class FakeClient:
-        def __init__(self, mac, hass=None, name=None, **kwargs):
+        def __init__(self, mac, hass=None, name=None, on_disconnect=None, **kwargs):
             captured["mac"] = mac
             captured["hass"] = hass
             captured["name"] = name
+            captured["on_disconnect"] = on_disconnect
 
     monkeypatch.setattr(gvm_integration, "GvmBleClient", FakeClient)
     hass = SimpleNamespace()
@@ -141,10 +142,23 @@ def test_default_client_receives_hass_and_name(monkeypatch):
         title="BT_LED",
     )
 
-    gvm_integration.GvmDeviceCoordinator(hass, entry)
+    coordinator = gvm_integration.GvmDeviceCoordinator(hass, entry)
 
     assert captured == {
         "mac": "94:C9:60:B6:CC:87",
         "hass": hass,
         "name": "BT_LED",
+        "on_disconnect": coordinator._handle_client_disconnect,
     }
+
+
+def test_client_disconnect_marks_unavailable_and_reconnects(monkeypatch):
+    coordinator, _client = make_coordinator()
+    coordinator._available = True
+    scheduled = []
+    monkeypatch.setattr(coordinator, "_schedule_reconnect", lambda: scheduled.append(1))
+
+    coordinator._handle_client_disconnect()
+
+    assert coordinator.available is False
+    assert scheduled == [1]

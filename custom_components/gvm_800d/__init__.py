@@ -32,6 +32,7 @@ class GvmDeviceCoordinator:
             name=entry.title or "GVM 800D RGB",
             on_handshake=self._on_handshake,
             on_state=self._on_state,
+            on_disconnect=self._handle_client_disconnect,
         )
         self.handshake: dict[str, Any] | None = None
         self.state: dict[str, Any] = {}
@@ -68,6 +69,12 @@ class GvmDeviceCoordinator:
         self.state.update(state)
         self._available = True
         self._notify_listeners()
+
+    def _handle_client_disconnect(self) -> None:
+        """Mark the light unavailable and start reconnecting."""
+        self._available = False
+        self._notify_listeners()
+        self._schedule_reconnect()
 
     async def async_connect(self) -> None:
         """Connect, retry the handshake query, and wait for a valid handshake."""
