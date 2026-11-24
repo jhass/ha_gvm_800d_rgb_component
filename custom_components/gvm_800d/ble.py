@@ -107,3 +107,122 @@ def parse_state(payload_hex: str) -> dict[str, Any] | None:
         return state
     except ValueError:
         return None
+
+
+class GvmBleError(Exception):
+    """Raised when GVM BLE communication fails."""
+
+
+class GvmBleClient:
+    """Own a single BLE connection to one GVM light."""
+
+    def __init__(
+        self,
+        mac: str,
+        on_handshake: Callable[[dict[str, Any]], None] | None = None,
+        on_state: Callable[[dict[str, Any]], None] | None = None,
+        client_factory: Callable[[str], BleakClient] | None = None,
+    ) -> None:
+        """Initialize the client."""
+        self.mac = mac
+        self._on_handshake = on_handshake
+        self._on_state = on_state
+        self._client_factory = client_factory or BleakClient
+        self._client: BleakClient | None = None
+        self._connected = False
+        self._device_id = "00"
+        self._device_type = "31"
+        self._write_lock = asyncio.Lock()
+
+    @property
+    def connected(self) -> bool:
+        """Return whether the client is connected."""
+        return self._connected
+
+    async def async_connect(self) -> None:
+        """Connect, subscribe to notifications, and send the handshake query."""
+        self._client = self._client_factory(self.mac)
+        await self._client.connect()
+        await self._client.start_notify(
+            CHARACTERISTIC_UUID, self._handle_notification
+        )
+        self._connected = True
+        await self._send_raw(HANDSHAKE_FRAME)
+
+    async def async_disconnect(self) -> None:
+        """Disconnect from the light."""
+        self._connected = False
+        if self._client is not None:
+            await self._client.disconnect()
+
+    async def send_command(self, cmd: int, value: int) -> None:
+        """Send one control command with retries."""
+        frame = build_command_frame(self._device_id, self._device_type, cmd, value)
+        for attempt in range(3):
+            try:
+                await self._send_raw(frame)
+                return
+            except Exception as err:
+                if attempt == 2:
+                    raise GvmBleError(f"write failed for command {cmd:02X}") from err
+                await asyncio.sleep(0.2)
+
+    async def _send_raw(self, frame: str) -> None:
+        """Write a hex frame, chunking only oversized frames."""
+        if not self._connected or self._client is None:
+            raise GvmBleError("not connected")
+        async with self._write_lock:
+            if len(frame) > 40:
+                chunks = [frame[index : index + 20] for index in range(0, len(frame), 20)]
+            else:
+                chunks = [frame]
+            for index, chunk in enumerate(chunks):
+                await self._client.write_gatt_char(
+                    CHARACTERISTIC_UUID,
+                    (chunk + "\r\n").encode("ascii"),
+                    response=True,
+                )
+                if index < len(chunks) - 1:
+                    await asyncio.sleep(0.2)
+
+    def _handle_notification(self, _sender: Any, data: bytearray) -> None:
+        """Handle a GATT notification."""
+        raw = bytes(data)
+        try:
+            text = raw.decode("ascii")
+        except UnicodeDecodeError:
+            text = ""
+        normalized_text = _normalize_hex(text)
+        if normalized_text and all(
+            char in "0123456789ABCDEF" for char in normalized_text
+        ):
+            frame = normalized_text
+        else:
+            frame = raw.hex().upper()
+        if len(frame) < 12:
+            return
+        marker = frame[10:12]
+        if marker == "53":
+            handshake = parse_handshake(frame)
+            if handshake is None:
+                return
+            self._device_id = handshake["device_id"]
+            self._device_type = handshake["device_type"]
+            if self._on_handshake is not None:
+                self._on_handshake(handshake)
+        elif marker == "03":
+            payload = frame[12:-4]
+            state = parse_state(payload)
+            if state is None:
+                return
+            if self._on_state is not None:
+                self._on_state(state)
+            ack = build_ack_frame(self._device_id, self._device_type, payload)
+            asyncio.create_task(self._send_ack(ack))
+
+    async def _send_ack(self, frame: str) -> None:
+        """Send an acknowledgement without propagating background errors."""
+        try:
+            await self._send_raw(frame)
+        except GvmBleError:
+            pass
