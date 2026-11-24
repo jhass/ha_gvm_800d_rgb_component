@@ -26,4 +26,11 @@ CMD_SPEED = 0x08
 MODE_CCT = 0x01
 MODE_COLOR = 0x02
 
-PLATFORMS = ["light"]
+PLATFORMS = ["light", "select"]
+
+MODE_CCT_LABEL = "Color temperature"
+MODE_COLOR_LABEL = "Color"
+MODE_LABELS = {
+    MODE_CCT_LABEL: MODE_CCT,
+    MODE_COLOR_LABEL: MODE_COLOR,
+}
