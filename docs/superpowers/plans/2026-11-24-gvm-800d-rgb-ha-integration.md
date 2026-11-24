@@ -133,11 +133,11 @@ pytest-homeassistant-custom-component>=0.13.0
   "codeowners": ["@jhass"],
   "config_flow": true,
   "dependencies": ["bluetooth"],
-  "documentation": "https://github.com/jhass/gvm_800d_rgb_component",
+  "documentation": "https://github.com/jhass/ha_gvm_800d_rgb_component",
   "homeassistant": "2024.6.0",
   "integration_type": "device",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/jhass/gvm_800d_rgb_component/issues",
+  "issue_tracker": "https://github.com/jhass/ha_gvm_800d_rgb_component/issues",
   "bluetooth": [
     {
       "match": {

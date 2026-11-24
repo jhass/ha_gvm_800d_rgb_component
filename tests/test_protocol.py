@@ -10,6 +10,10 @@ from custom_components.gvm_800d.ble import (
 CAPTURED_FRAMES = [
     "4C5409000053000001009474",
     "4C540900315700060101D5DF",
+    "4C540900315700060102E5BC",
+    "4C540900315700060103F59D",
+    "4C54090031570007010f0321",
+    "4C54090031570008011a6D84",
     "4C540900315700000100775E",
     "4C5409003157000201188A07",
     "4C54090031570005012B09A7",
@@ -24,6 +28,8 @@ def test_crc_matches_captured_frames():
 
 def test_build_command_frame_matches_capture():
     assert build_command_frame("00", "31", 0x06, 0x01) == "4C540900315700060101D5DF"
+    assert build_command_frame("00", "31", 0x07, 0x0F) == "4C54090031570007010F0321"
+    assert build_command_frame("00", "31", 0x08, 0x1A) == "4C54090031570008011A6D84"
     assert build_command_frame("00", "31", 0x00, 0x00) == "4C540900315700000100775E"
 
 

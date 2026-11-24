@@ -9,12 +9,14 @@ No GVM cloud account, Tuya account, or MQTT bridge is required.
 - On/off and brightness
 - Color temperature with the light's reported Kelvin range
 - HS and RGB color
-- Device notifications for power, brightness, color, and mode
+- Device notifications for power, brightness, color, mode, scene, and effect speed
 - Automatic reconnect after the light drops BLE
-- Effects, scenes, speed, and mode controls via Home Assistant select entities
+- 18 built-in `rgb31` scenes as a Home Assistant select entity
+- Effect speed as a Home Assistant number entity (200–4500 ms)
+- Mode select for color temperature, color, and effect modes
 - Setup from a scanner-driven list of nearby lights; manual MAC entry remains available
 
-Microphone-reactive music effects are not implemented because they require the phone app's microphone input.
+The app's microphone-reactive music effects, cloud-managed custom effects, zone dimming, groups, and the extra `rgb33`-only scenes are not exposed because they are not available through the light's direct GATT command set.
 
 ## Installation
 
@@ -40,9 +42,10 @@ The light supports one BLE connection at a time. Close the GVM phone app before 
 ## Entities
 
 - **Light:** power, brightness, color temperature, HS/RGB color
-- **Selects:** effect/scene, mode, and effect speed
+- **Selects:** mode (`Color temperature`, `Color`, `Effect`) and the 18 built-in scenes
+- **Number:** effect speed in milliseconds
 
-Entity names and options follow the values reported by the Android app protocol.
+Choosing a scene or changing effect speed switches the light into its effect mode first, matching the app's command sequence. Entity names and options follow the values reported by the Android app protocol.
 
 ## Troubleshooting
 

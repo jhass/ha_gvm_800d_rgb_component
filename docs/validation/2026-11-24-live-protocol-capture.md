@@ -21,7 +21,11 @@ CRC-16 uses polynomial `0x1021` and initial value `0x0000`. Captured frames incl
 
 ```text
 4C5409000053000001009474   handshake query
-4C540900315700060101D5DF   mode 01
+4C540900315700060101D5DF   mode 01 (color temperature)
+4C540900315700060102E5BC   mode 02 (color)
+4C540900315700060103F59D   mode 03 (effect)
+4C54090031570007010F0321   scene 0F (Hue Loop)
+4C54090031570008011A6D84   speed 0x1A (2600 ms)
 4C540900315700000100775E   power off
 4C540900315700000101677F   power on
 4C5409003157000201188A07   brightness 0x18
@@ -43,6 +47,15 @@ State notifications are parsed from payloads of 8, 12, or 18 hex characters afte
 - [x] HA entity connects to `BT_LED` and reads handshake data.
 - [x] HA on/off, brightness, CCT, hue, and saturation match app behavior.
 - [x] HA receives state notifications, marks the entity unavailable on BLE loss, and reconnects after the light returns.
+- [x] App `rgb31` scene list decoded into 18 labels for command `07`.
+- [x] App speed values `0x02`–`0x2D` decoded as 200–4500 ms for command `08`.
+- [ ] HA mode, scene, and speed entities validated on the physical light.
+
+## Feature mapping and exclusions
+
+The direct GATT command set covers power, brightness, CCT, hue, saturation, mode, built-in scene, and effect speed. The app uses these commands from `MainActivity` and `ColorfulActivity`, and the captured frames above confirm the value ranges used by device type `31`.
+
+The app's custom-effect, source-matching, zone-dimming, and group screens send arrays through `ThingUtil.publishDpsDevice()` using Tuya/Thingclips device or group state. Those features are not reproducible from the direct BLE GATT commands captured here and are intentionally excluded. Phone-microphone music effects are also excluded because they depend on phone audio input. The `rgb33` scene list adds two extra strobe scenes that are not present on this `rgb31` light, so they are not exposed.
 
 ## Local BLE results
 

@@ -25,12 +25,41 @@ CMD_SPEED = 0x08
 
 MODE_CCT = 0x01
 MODE_COLOR = 0x02
+MODE_EFFECT = 0x03
 
-PLATFORMS = ["light", "select"]
+PLATFORMS = ["light", "number", "select"]
 
 MODE_CCT_LABEL = "Color temperature"
 MODE_COLOR_LABEL = "Color"
+MODE_EFFECT_LABEL = "Effect"
 MODE_LABELS = {
     MODE_CCT_LABEL: MODE_CCT,
     MODE_COLOR_LABEL: MODE_COLOR,
+    MODE_EFFECT_LABEL: MODE_EFFECT,
 }
+
+# Scene IDs from the app's rgb31 source list (device type 31).
+SCENES = {
+    "Lightning": 1,
+    "Cop Car": 2,
+    "Candle": 3,
+    "TV": 4,
+    "Bad Bulb": 5,
+    "Party": 6,
+    "Disco": 7,
+    "Paparazzi": 8,
+    "Explosion": 9,
+    "Pulsing": 10,
+    "Flame": 11,
+    "Fireworks": 12,
+    "Welding": 13,
+    "CCT Loop": 14,
+    "Hue Loop": 15,
+    "Ambulance": 16,
+    "Fire Truck": 17,
+    "SOS": 18,
+}
+SCENE_BY_VALUE = {value: label for label, value in SCENES.items()}
+
+SPEED_MIN_MS = 200
+SPEED_MAX_MS = 4500

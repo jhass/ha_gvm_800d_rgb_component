@@ -9,13 +9,28 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import GvmDeviceCoordinator
-from .const import CMD_MODE, DOMAIN, MODE_LABELS
+from .const import (
+    CMD_MODE,
+    CMD_SCENE_SELECT,
+    DOMAIN,
+    MODE_EFFECT,
+    MODE_LABELS,
+    SCENES,
+    SCENE_BY_VALUE,
+)
 
 MODE_DESCRIPTION = SelectEntityDescription(
     key="mode",
     name="Mode",
     icon="mdi:theme-light-dark",
     options=list(MODE_LABELS),
+)
+
+SCENE_DESCRIPTION = SelectEntityDescription(
+    key="scene",
+    name="Scene",
+    icon="mdi:sparkles",
+    options=list(SCENES),
 )
 
 
@@ -26,7 +41,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up GVM select entities."""
     coordinator: GvmDeviceCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([GvmModeSelect(coordinator, entry)])
+    async_add_entities(
+        [GvmModeSelect(coordinator, entry), GvmSceneSelect(coordinator, entry)]
+    )
 
 
 class GvmSelectEntity(SelectEntity):
@@ -86,3 +103,22 @@ class GvmModeSelect(GvmSelectEntity):
     async def async_select_option(self, option: str) -> None:
         """Set the light mode."""
         await self.coordinator.async_request(CMD_MODE, MODE_LABELS[option])
+
+
+class GvmSceneSelect(GvmSelectEntity):
+    """Select the active built-in scene or effect."""
+
+    def __init__(self, coordinator: GvmDeviceCoordinator, entry: ConfigEntry) -> None:
+        """Initialize the scene select."""
+        super().__init__(coordinator, entry, SCENE_DESCRIPTION)
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current scene reported by the light."""
+        value = self.coordinator.state.get("scene_detail")
+        return SCENE_BY_VALUE.get(value)
+
+    async def async_select_option(self, option: str) -> None:
+        """Set the light scene."""
+        await self.coordinator.async_request(CMD_MODE, MODE_EFFECT)
+        await self.coordinator.async_request(CMD_SCENE_SELECT, SCENES[option])
