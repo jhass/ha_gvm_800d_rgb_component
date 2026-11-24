@@ -11,10 +11,9 @@ def test_manifest():
     assert data["config_flow"] is True
     assert data["dependencies"] == ["bluetooth"]
     assert data["iot_class"] == "local_push"
-    assert (
-        data["bluetooth"][0]["match"]["service_uuid"]
-        == "00010203-0405-0607-0809-0a0b0c0d1910"
-    )
+    matches = [entry["match"] for entry in data["bluetooth"]]
+    assert {"service_uuid": "00010203-0405-0607-0809-0a0b0c0d1910"} in matches
+    assert {"local_name": "BT_LED"} in matches
 
 
 def test_hacs_json():
@@ -32,5 +31,6 @@ def test_translations():
         (ROOT / "custom_components/gvm_800d/translations/en.json").read_text()
     )
     assert strings == english
-    assert strings["config"]["step"]["user"]["data"]["mac"] == "MAC address"
+    assert strings["config"]["step"]["user"]["data"]["device"] == "Discovered light"
+    assert strings["config"]["step"]["manual"]["data"]["mac"] == "MAC address"
     assert "invalid_mac" in strings["config"]["error"]

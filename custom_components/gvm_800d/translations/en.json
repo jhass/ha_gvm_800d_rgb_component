@@ -3,7 +3,14 @@
     "step": {
       "user": {
         "title": "Connect to GVM 800D RGB",
-        "description": "Enter the Bluetooth MAC address of your BT_LED light.",
+        "description": "Found {count} nearby light(s). Choose a light, rescan, or enter a MAC address manually.",
+        "data": {
+          "device": "Discovered light"
+        }
+      },
+      "manual": {
+        "title": "Enter light address",
+        "description": "Power-cycle the light if it is not listed. Enter its Bluetooth MAC address.",
         "data": {
           "mac": "MAC address"
         }
