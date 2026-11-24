@@ -22,3 +22,15 @@ def test_hacs_json():
     assert data["name"] == "GVM 800D RGB"
     assert data["render_readme"] is True
     assert data["homeassistant"] == "2024.6.0"
+
+
+def test_translations():
+    strings = json.loads(
+        (ROOT / "custom_components/gvm_800d/strings.json").read_text()
+    )
+    english = json.loads(
+        (ROOT / "custom_components/gvm_800d/translations/en.json").read_text()
+    )
+    assert strings == english
+    assert strings["config"]["step"]["user"]["data"]["mac"] == "MAC address"
+    assert "invalid_mac" in strings["config"]["error"]

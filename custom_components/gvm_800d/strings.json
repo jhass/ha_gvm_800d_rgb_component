@@ -1,0 +1,25 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to GVM 800D RGB",
+        "description": "Enter the Bluetooth MAC address of your BT_LED light.",
+        "data": {
+          "mac": "MAC address"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "Connect to {name}?",
+        "description": "Found {name} at {mac}. Continue with this light?"
+      }
+    },
+    "error": {
+      "invalid_mac": "Enter a valid MAC address."
+    },
+    "abort": {
+      "already_configured": "This light is already configured.",
+      "cannot_connect": "Could not connect to the light.",
+      "unsupported_device": "This device is not a supported GVM light."
+    }
+  }
+}
