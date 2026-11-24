@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable
 from typing import Any, Callable
 
 from bleak import BleakClient
+from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
+from homeassistant.components import bluetooth
+from homeassistant.core import HomeAssistant
 
 from .const import (
     CHARACTERISTIC_UUID,
@@ -119,15 +123,19 @@ class GvmBleClient:
     def __init__(
         self,
         mac: str,
+        hass: HomeAssistant | None = None,
+        name: str = "GVM 800D RGB",
         on_handshake: Callable[[dict[str, Any]], None] | None = None,
         on_state: Callable[[dict[str, Any]], None] | None = None,
-        client_factory: Callable[[str], BleakClient] | None = None,
+        connect_factory: Callable[[], Awaitable[BleakClient]] | None = None,
     ) -> None:
         """Initialize the client."""
         self.mac = mac
+        self._hass = hass
+        self._name = name
         self._on_handshake = on_handshake
         self._on_state = on_state
-        self._client_factory = client_factory or BleakClient
+        self._connect_factory = connect_factory or self._async_establish_connection
         self._client: BleakClient | None = None
         self._connected = False
         self._device_id = "00"
@@ -141,13 +149,30 @@ class GvmBleClient:
 
     async def async_connect(self) -> None:
         """Connect, subscribe to notifications, and send the handshake query."""
-        self._client = self._client_factory(self.mac)
-        await self._client.connect()
+        self._client = await self._connect_factory()
         await self._client.start_notify(
             CHARACTERISTIC_UUID, self._handle_notification
         )
         self._connected = True
         await self._send_raw(HANDSHAKE_FRAME)
+
+    async def _async_establish_connection(self) -> BleakClient:
+        """Connect through Home Assistant with retry and service caching."""
+        if self._hass is None:
+            raise GvmBleError("Home Assistant instance is required for BLE connection")
+        device = bluetooth.async_ble_device_from_address(
+            self._hass, self.mac, connectable=True
+        )
+        if device is None:
+            raise GvmBleError(
+                f"{self.mac} is not visible to a connectable Bluetooth adapter"
+            )
+        return await establish_connection(
+            BleakClientWithServiceCache,
+            device,
+            self._name,
+            max_attempts=3,
+        )
 
     async def async_disconnect(self) -> None:
         """Disconnect from the light."""

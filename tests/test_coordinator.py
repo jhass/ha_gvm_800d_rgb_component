@@ -1,6 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
+import custom_components.gvm_800d as gvm_integration
 from custom_components.gvm_800d import GvmDeviceCoordinator
 from custom_components.gvm_800d.const import CMD_BRIGHTNESS, CMD_POWER
 
@@ -61,3 +62,29 @@ async def test_request_coalesces_same_command():
     assert (CMD_POWER, 1) in client.commands
     assert (CMD_BRIGHTNESS, 20) in client.commands
     assert (CMD_BRIGHTNESS, 10) not in client.commands
+
+
+def test_default_client_receives_hass_and_name(monkeypatch):
+    captured = {}
+
+    class FakeClient:
+        def __init__(self, mac, hass=None, name=None, **kwargs):
+            captured["mac"] = mac
+            captured["hass"] = hass
+            captured["name"] = name
+
+    monkeypatch.setattr(gvm_integration, "GvmBleClient", FakeClient)
+    hass = SimpleNamespace()
+    entry = SimpleNamespace(
+        entry_id="test",
+        data={"mac": "94:C9:60:B6:CC:87"},
+        title="BT_LED",
+    )
+
+    gvm_integration.GvmDeviceCoordinator(hass, entry)
+
+    assert captured == {
+        "mac": "94:C9:60:B6:CC:87",
+        "hass": hass,
+        "name": "BT_LED",
+    }

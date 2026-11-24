@@ -28,6 +28,8 @@ class GvmDeviceCoordinator:
         self.mac = entry.data[CONF_MAC]
         self.client = client or GvmBleClient(
             self.mac,
+            hass=hass,
+            name=entry.title or "GVM 800D RGB",
             on_handshake=self._on_handshake,
             on_state=self._on_state,
         )
