@@ -1,0 +1,20 @@
+{
+  "domain": "gvm_800d",
+  "name": "GVM 800D RGB",
+  "codeowners": ["@jhass"],
+  "config_flow": true,
+  "dependencies": ["bluetooth"],
+  "documentation": "https://github.com/jhass/gvm_800d_rgb_component",
+  "homeassistant": "2024.6.0",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/jhass/gvm_800d_rgb_component/issues",
+  "bluetooth": [
+    {
+      "match": {
+        "service_uuid": "00010203-0405-0607-0809-0a0b0c0d1910"
+      }
+    }
+  ],
+  "version": "0.1.0"
+}
