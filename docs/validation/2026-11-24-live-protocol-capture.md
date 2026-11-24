@@ -43,3 +43,34 @@ State notifications are parsed from payloads of 8, 12, or 18 hex characters afte
 - [ ] HA receives state notifications and reconnects after BLE loss.
 
 The last three items are completed during implementation validation with the physical light.
+
+## Local BLE probe
+
+`tools/local_ble_probe.py` uses the local machine's BLE stack instead of Home Assistant. It is useful for isolating protocol problems from HA integration problems.
+
+Before each run:
+
+1. Power-cycle the light. It can stop advertising after being on for a while.
+2. Close the GVM phone app.
+3. Unload or disable the HA integration so it does not hold the single BLE connection.
+4. Keep the light within a few metres of the machine running the probe.
+
+Run the handshake probe:
+
+```bash
+.venv/bin/python tools/local_ble_probe.py
+```
+
+Send one captured command after the handshake:
+
+```bash
+.venv/bin/python tools/local_ble_probe.py --frame 4C540900315700000101677F
+```
+
+Build and send a command from bytes:
+
+```bash
+.venv/bin/python tools/local_ble_probe.py --cmd 0x02 --value 0x18
+```
+
+The probe writes raw bytes with the app's `0xFF` terminator and `WRITE_NO_RESPONSE`, then prints every notification as raw hex and decoded text.
