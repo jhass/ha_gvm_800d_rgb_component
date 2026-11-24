@@ -119,10 +119,13 @@ async def probe(args: argparse.Namespace) -> int:
                 CHARACTERISTIC_UUID, frame_payload(frame), response=False
             )
             print(f"WRITE  {normalize_hex(frame)}")
-            try:
-                await asyncio.wait_for(notification_event.wait(), args.notify_timeout)
-            except TimeoutError:
-                print("No notification after command.")
+            if args.listen_seconds:
+                await asyncio.sleep(args.listen_seconds)
+            else:
+                try:
+                    await asyncio.wait_for(notification_event.wait(), args.notify_timeout)
+                except TimeoutError:
+                    print("No notification after command.")
     finally:
         await client.disconnect()
     return 0
@@ -155,6 +158,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=5.0,
         help="seconds to wait for a notification after a command",
+    )
+    parser.add_argument(
+        "--listen-seconds",
+        type=float,
+        default=0.0,
+        help="keep the connection open and print every notification after a command",
     )
     parser.add_argument("--device-id", default="00", help="GVM device ID byte")
     parser.add_argument("--device-type", default="31", help="GVM device type byte")

@@ -120,4 +120,14 @@ Build and send a command from bytes:
 .venv/bin/python tools/local_ble_probe.py --cmd 0x02 --value 0x18
 ```
 
-The probe writes raw bytes with the app's `0xFF` terminator and `WRITE_NO_RESPONSE`, then prints every notification as raw hex and decoded text. It repeats the handshake query once per second until the light returns a `53` response; the physical light responds on the second query.
+The probe writes raw bytes with the app's `0xFF` terminator and `WRITE_NO_RESPONSE`, then prints every notification as raw hex and decoded text. It repeats the handshake query once per second until the light returns a `53` response; the physical light responds on the second query. Use `--listen-seconds 8` after a command because the first notification can be a periodic state report from before the write.
+
+Effect command validation on 2026-11-24:
+
+```text
+4C540900315700060103F59D   mode 03
+4C54090031570007010F0321   scene 0F -> mode 03, scene_detail 15 (Hue Loop)
+4C54090031570008011A6D84   speed 0x1A -> speed_ms 2600
+```
+
+The mode/scene/speed mappings are confirmed from the local BLE stack with the GVM phone app closed. Home Assistant entity validation for these new controls is still pending.
