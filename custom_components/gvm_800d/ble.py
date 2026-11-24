@@ -154,6 +154,10 @@ class GvmBleClient:
             CHARACTERISTIC_UUID, self._handle_notification
         )
         self._connected = True
+        await self.async_send_handshake()
+
+    async def async_send_handshake(self) -> None:
+        """Send the handshake query used to discover device identity."""
         await self._send_raw(HANDSHAKE_FRAME)
 
     async def _async_establish_connection(self) -> BleakClient:

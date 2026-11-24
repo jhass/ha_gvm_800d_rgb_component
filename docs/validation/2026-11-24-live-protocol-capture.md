@@ -38,11 +38,45 @@ State notifications are parsed from payloads of 8, 12, or 18 hex characters afte
 - [x] CRC verified offline against captured frames.
 - [x] Direct GVM BLE service and characteristic identified.
 - [x] App handshake query identified: `4C5409000053000001009474`.
-- [ ] HA connects to `BT_LED` and reads handshake data.
+- [x] Direct BLE handshake reads device identity and CCT bounds.
+- [x] Direct on/off, brightness, CCT, hue, and saturation match app behavior.
+- [ ] HA entity connects to `BT_LED` and reads handshake data.
 - [ ] HA on/off, brightness, CCT, hue, and saturation match app behavior.
 - [ ] HA receives state notifications and reconnects after BLE loss.
 
-The last three items are completed during implementation validation with the physical light.
+## Local BLE results
+
+Validation used `tools/local_ble_probe.py` against the physical light from the local macOS Bluetooth stack. The phone app was closed and HA was not holding the connection.
+
+The first handshake query produced only a state notification. The light returned the handshake response after the second query:
+
+```text
+4C540A00315300000220389378
+```
+
+Decoded as device ID `00`, device type `31`, CCT minimum `3200 K`, and CCT maximum `5600 K`. This matches the app's `resloveHandData` parser, so the integration repeats the handshake query once per second until a `53` response arrives.
+
+A representative state notification:
+
+```text
+4C540E003103010915343949010F1D9CD3
+payload 010915343949010F1D
+```
+
+Decoded as power on, brightness `24`, CCT `5200 K`, hue `285°`, saturation `73`, mode `01`, scene detail `15`, and speed `2900 ms`.
+
+Captured control frames were written as raw bytes with the `0xFF` terminator. Observed state changes:
+
+```text
+4C540900315700000100775E   power off -> power False
+4C540900315700000101677F   power on  -> power True
+4C5409003157000201188A07   brightness 0x18 -> brightness 24
+4C5409003157000301200A6C   CCT 0x20 -> 3200 K
+4C540900315700040132BD8F   hue 0x32 -> 250°
+4C54090031570005012B09A7   saturation 0x2B -> 43
+```
+
+The remaining HA checklist items need a reload of the integration on the HA host.
 
 ## Local BLE probe
 
@@ -73,4 +107,4 @@ Build and send a command from bytes:
 .venv/bin/python tools/local_ble_probe.py --cmd 0x02 --value 0x18
 ```
 
-The probe writes raw bytes with the app's `0xFF` terminator and `WRITE_NO_RESPONSE`, then prints every notification as raw hex and decoded text.
+The probe writes raw bytes with the app's `0xFF` terminator and `WRITE_NO_RESPONSE`, then prints every notification as raw hex and decoded text. It repeats the handshake query once per second until the light returns a `53` response; the physical light responds on the second query.

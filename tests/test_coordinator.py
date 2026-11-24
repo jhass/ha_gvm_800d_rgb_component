@@ -13,11 +13,16 @@ class FakeClient:
         self.connected = False
         self.commands = []
         self.disconnects = 0
+        self.handshake_writes = 0
         self.on_handshake = None
         self.on_state = None
 
+    async def async_send_handshake(self):
+        self.handshake_writes += 1
+
     async def async_connect(self):
         self.connected = True
+        await self.async_send_handshake()
         self.on_handshake(
             {
                 "device_id": "00",
@@ -53,6 +58,37 @@ async def test_connect_reads_handshake_and_state():
     assert coordinator.handshake["device_type"] == "31"
     assert coordinator.state["brightness"] == 50
     assert client.connected is True
+
+
+async def test_handshake_query_is_retried(monkeypatch):
+    coordinator, client = make_coordinator()
+
+    async def connect_without_handshake():
+        client.connected = True
+        await client.async_send_handshake()
+
+    sleeps = 0
+
+    async def fake_sleep(_delay):
+        nonlocal sleeps
+        sleeps += 1
+        if sleeps == 2:
+            coordinator._on_handshake(
+                {
+                    "device_id": "00",
+                    "device_type": "31",
+                    "cct_min": 3200,
+                    "cct_max": 5600,
+                }
+            )
+
+    client.async_connect = connect_without_handshake
+    monkeypatch.setattr(gvm_integration.asyncio, "sleep", fake_sleep)
+
+    await coordinator.async_connect()
+
+    assert client.handshake_writes == 2
+    assert sleeps == 2
 
 
 async def test_handshake_timeout_disconnects_client(monkeypatch):

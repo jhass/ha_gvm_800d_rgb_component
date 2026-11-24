@@ -12,12 +12,16 @@ from bleak import BleakClient, BleakScanner
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from custom_components.gvm_800d.ble import (  # noqa: E402
+    build_command_frame,
+    parse_handshake,
+    parse_state,
+)
 from custom_components.gvm_800d.const import (  # noqa: E402
     CHARACTERISTIC_UUID,
     HANDSHAKE_FRAME,
     SERVICE_UUID,
 )
-from custom_components.gvm_800d.ble import build_command_frame  # noqa: E402
 
 TERMINATOR = b"\xff"
 
@@ -49,7 +53,7 @@ async def find_device(name: str, timeout: float):
 
 
 async def probe(args: argparse.Namespace) -> int:
-    """Connect, subscribe, send the handshake, and optionally send a command."""
+    """Connect, subscribe, retry the handshake, and optionally send a command."""
     matches, devices = await find_device(args.name, args.timeout)
     if args.device:
         device = next((d for d in devices if d.address == args.device), None)
@@ -70,30 +74,44 @@ async def probe(args: argparse.Namespace) -> int:
         return 1
 
     print(f"Connecting to {device.address} ({device.name!r})")
-    notification = asyncio.Event()
+    handshake_event = asyncio.Event()
+    notification_event = asyncio.Event()
     client = BleakClient(device)
 
     def on_notify(_sender, data: bytearray) -> None:
         raw = bytes(data)
+        text = raw.hex().upper()
         print(f"NOTIFY raw={raw.hex(' ').upper()} text={raw!r}")
-        notification.set()
+        parsed = parse_handshake(text) or parse_state(text[12:-4])
+        if parsed:
+            print(f"PARSED {parsed}")
+        if len(raw) > 5 and raw[5] == 0x53:
+            handshake_event.set()
+        notification_event.set()
 
     try:
         await client.connect()
         await client.start_notify(CHARACTERISTIC_UUID, on_notify)
-        await client.write_gatt_char(
-            CHARACTERISTIC_UUID, frame_payload(HANDSHAKE_FRAME), response=False
-        )
-        print(f"WRITE  {HANDSHAKE_FRAME}")
-        try:
-            await asyncio.wait_for(notification.wait(), args.handshake_timeout)
-        except TimeoutError:
-            print("No notification after handshake query.")
-        else:
-            print("Handshake notification received.")
+
+        handshake_received = False
+        for attempt in range(1, args.handshake_attempts + 1):
+            await client.write_gatt_char(
+                CHARACTERISTIC_UUID, frame_payload(HANDSHAKE_FRAME), response=False
+            )
+            print(f"WRITE  {HANDSHAKE_FRAME} (attempt {attempt})")
+            try:
+                await asyncio.wait_for(handshake_event.wait(), args.handshake_interval)
+            except TimeoutError:
+                continue
+            handshake_received = True
+            break
+
+        if not handshake_received:
+            print("No 53 handshake response after the configured attempts.")
+            return 1
 
         if args.frame or args.cmd is not None:
-            notification.clear()
+            notification_event.clear()
             frame = args.frame or build_command_frame(
                 args.device_id, args.device_type, args.cmd, args.value
             )
@@ -102,7 +120,7 @@ async def probe(args: argparse.Namespace) -> int:
             )
             print(f"WRITE  {normalize_hex(frame)}")
             try:
-                await asyncio.wait_for(notification.wait(), args.handshake_timeout)
+                await asyncio.wait_for(notification_event.wait(), args.notify_timeout)
             except TimeoutError:
                 print("No notification after command.")
     finally:
@@ -121,10 +139,22 @@ def parse_args() -> argparse.Namespace:
         "--timeout", type=float, default=15.0, help="scan duration in seconds"
     )
     parser.add_argument(
-        "--handshake-timeout",
+        "--handshake-interval",
+        type=float,
+        default=1.0,
+        help="seconds to wait for a 53 response between handshake queries",
+    )
+    parser.add_argument(
+        "--handshake-attempts",
+        type=int,
+        default=10,
+        help="maximum number of handshake queries",
+    )
+    parser.add_argument(
+        "--notify-timeout",
         type=float,
         default=5.0,
-        help="notification wait in seconds",
+        help="seconds to wait for a notification after a command",
     )
     parser.add_argument("--device-id", default="00", help="GVM device ID byte")
     parser.add_argument("--device-type", default="31", help="GVM device type byte")

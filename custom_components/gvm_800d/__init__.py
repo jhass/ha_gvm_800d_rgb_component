@@ -41,6 +41,7 @@ class GvmDeviceCoordinator:
         self._pending: dict[int, int] = {}
         self._write_task: asyncio.Task[None] | None = None
         self._reconnect_task: asyncio.Task[None] | None = None
+        self._handshake_retry_task: asyncio.Task[None] | None = None
 
     @property
     def available(self) -> bool:
@@ -69,10 +70,14 @@ class GvmDeviceCoordinator:
         self._notify_listeners()
 
     async def async_connect(self) -> None:
-        """Connect and wait for a valid handshake."""
+        """Connect, retry the handshake query, and wait for a valid handshake."""
         self._handshake_event.clear()
+        self._handshake_retry_task = None
         try:
             await self.client.async_connect()
+            self._handshake_retry_task = asyncio.create_task(
+                self._async_retry_handshake()
+            )
             await asyncio.wait_for(self._handshake_event.wait(), 10)
         except TimeoutError as err:
             await self.client.async_disconnect()
@@ -82,8 +87,23 @@ class GvmDeviceCoordinator:
             await self.client.async_disconnect()
             self._available = False
             raise
+        finally:
+            if self._handshake_retry_task is not None:
+                self._handshake_retry_task.cancel()
+                await asyncio.gather(self._handshake_retry_task, return_exceptions=True)
         self._available = True
         self._notify_listeners()
+
+    async def _async_retry_handshake(self) -> None:
+        """Repeat the handshake query until the light identifies itself."""
+        while not self._handshake_event.is_set():
+            await asyncio.sleep(1)
+            if self._handshake_event.is_set():
+                return
+            try:
+                await self.client.async_send_handshake()
+            except Exception:
+                return
 
     async def async_request(self, cmd: int, value: int) -> None:
         """Queue the latest value for a command."""
@@ -124,7 +144,11 @@ class GvmDeviceCoordinator:
 
     async def async_shutdown(self) -> None:
         """Cancel background work and disconnect."""
-        for task in (self._write_task, self._reconnect_task):
+        for task in (
+            self._write_task,
+            self._reconnect_task,
+            self._handshake_retry_task,
+        ):
             if task is not None and not task.done():
                 task.cancel()
         await self.client.async_disconnect()
