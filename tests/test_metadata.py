@@ -32,5 +32,5 @@ def test_translations():
     )
     assert strings == english
     assert strings["config"]["step"]["user"]["data"]["device"] == "Discovered light"
-    assert strings["config"]["step"]["manual"]["data"]["mac"] == "MAC address"
+    assert strings["config"]["step"]["manual"]["data"]["mac"] == "Bluetooth address"
     assert "invalid_mac" in strings["config"]["error"]

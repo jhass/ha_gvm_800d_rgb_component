@@ -3,16 +3,16 @@
     "step": {
       "user": {
         "title": "Connect to GVM 800D RGB",
-        "description": "Found {count} nearby light(s). Choose a light, rescan, or enter a MAC address manually.",
+        "description": "Found {count} nearby light(s). Choose a light, refresh the list, or enter a Bluetooth address manually.",
         "data": {
           "device": "Discovered light"
         }
       },
       "manual": {
         "title": "Enter light address",
-        "description": "Power-cycle the light if it is not listed. Enter its Bluetooth MAC address.",
+        "description": "Power-cycle the light if it is not listed. Enter its Bluetooth MAC address or UUID.",
         "data": {
-          "mac": "MAC address"
+          "mac": "Bluetooth address"
         }
       },
       "bluetooth_confirm": {
@@ -21,7 +21,7 @@
       }
     },
     "error": {
-      "invalid_mac": "Enter a valid MAC address."
+      "invalid_mac": "Enter a valid Bluetooth MAC address or UUID."
     },
     "abort": {
       "already_configured": "This light is already configured.",

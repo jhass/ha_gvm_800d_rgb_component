@@ -172,6 +172,10 @@ class GvmBleClient:
             self._hass, self.mac, connectable=True
         )
         if device is None:
+            device = bluetooth.async_ble_device_from_address(
+                self._hass, self.mac, connectable=False
+            )
+        if device is None:
             raise GvmBleError(
                 f"{self.mac} is not visible to a connectable Bluetooth adapter"
             )

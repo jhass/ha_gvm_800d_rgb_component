@@ -139,3 +139,28 @@ async def test_connect_uses_ha_retry_connector(monkeypatch):
     callback(fake_client)
     assert client.connected is False
     assert disconnects == [True]
+
+
+async def test_connect_falls_back_to_all_bluetooth_history(monkeypatch):
+    device = SimpleNamespace(address=MAC, name="BT_LED")
+    fake_client = FakeBleakClient(MAC)
+    fake_client.connected = True
+    lookups = []
+
+    async def fake_establish_connection(_client_class, _ble_device, _name, **_kwargs):
+        return fake_client
+
+    def fake_lookup(_hass, _address, connectable=True):
+        lookups.append(connectable)
+        return device if not connectable else None
+
+    monkeypatch.setattr(
+        ble_module.bluetooth, "async_ble_device_from_address", fake_lookup
+    )
+    monkeypatch.setattr(ble_module, "establish_connection", fake_establish_connection)
+
+    client = GvmBleClient(MAC, hass=SimpleNamespace(), name="BT_LED")
+    await client.async_connect()
+
+    assert lookups == [True, False]
+    assert client.connected is True

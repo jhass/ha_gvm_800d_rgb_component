@@ -131,3 +131,5 @@ Effect command validation on 2026-11-24:
 ```
 
 The mode/scene/speed mappings are confirmed from the local BLE stack with the GVM phone app closed. After reloading Home Assistant, the Mode, Scene, and Effect speed entities also changed the physical light and received the expected notification state updates.
+
+A second light was observed in the GVM app as `BT_LED` at `94:C9:60:B6:C6:BB`. A local BLE scan saw a `BT_LED` advertisement with no advertised service UUIDs, confirming that the advertised name must remain a valid discovery path. Setup now matches names containing `BT_LED` like the app, reads all cached BLE history, and accepts macOS-style UUID addresses as well as MACs. Home Assistant discovery of the second light still needs a live recheck after updating the integration.
