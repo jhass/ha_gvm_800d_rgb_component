@@ -40,9 +40,9 @@ State notifications are parsed from payloads of 8, 12, or 18 hex characters afte
 - [x] App handshake query identified: `4C5409000053000001009474`.
 - [x] Direct BLE handshake reads device identity and CCT bounds.
 - [x] Direct on/off, brightness, CCT, hue, and saturation match app behavior.
-- [ ] HA entity connects to `BT_LED` and reads handshake data.
-- [ ] HA on/off, brightness, CCT, hue, and saturation match app behavior.
-- [ ] HA receives state notifications and reconnects after BLE loss.
+- [x] HA entity connects to `BT_LED` and reads handshake data.
+- [x] HA on/off, brightness, CCT, hue, and saturation match app behavior.
+- [x] HA receives state notifications, marks the entity unavailable on BLE loss, and reconnects after the light returns.
 
 ## Local BLE results
 
@@ -76,7 +76,7 @@ Captured control frames were written as raw bytes with the `0xFF` terminator. Ob
 4C54090031570005012B09A7   saturation 0x2B -> 43
 ```
 
-The remaining HA checklist items need a reload of the integration on the HA host.
+HA validation was completed on the HA host after reloading the integration. All controls changed the physical light and the entity state updated from notifications. A power-cycle marked the entity unavailable promptly and it became available again automatically after the light returned, because the BLE client now registers `disconnected_callback` with `bleak_retry_connector.establish_connection()`.
 
 ## Local BLE probe
 
