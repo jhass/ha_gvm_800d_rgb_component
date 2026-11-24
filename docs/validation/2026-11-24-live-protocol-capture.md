@@ -49,7 +49,7 @@ State notifications are parsed from payloads of 8, 12, or 18 hex characters afte
 - [x] HA receives state notifications, marks the entity unavailable on BLE loss, and reconnects after the light returns.
 - [x] App `rgb31` scene list decoded into 18 labels for command `07`.
 - [x] App speed values `0x02`–`0x2D` decoded as 200–4500 ms for command `08`.
-- [ ] HA mode, scene, and speed entities validated on the physical light.
+- [x] HA mode, scene, and speed entities validated on the physical light.
 
 ## Feature mapping and exclusions
 
@@ -130,4 +130,4 @@ Effect command validation on 2026-11-24:
 4C54090031570008011A6D84   speed 0x1A -> speed_ms 2600
 ```
 
-The mode/scene/speed mappings are confirmed from the local BLE stack with the GVM phone app closed. Home Assistant entity validation for these new controls is still pending.
+The mode/scene/speed mappings are confirmed from the local BLE stack with the GVM phone app closed. After reloading Home Assistant, the Mode, Scene, and Effect speed entities also changed the physical light and received the expected notification state updates.
