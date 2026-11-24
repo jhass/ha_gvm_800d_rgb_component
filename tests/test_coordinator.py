@@ -1,6 +1,8 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 import custom_components.gvm_800d as gvm_integration
 from custom_components.gvm_800d import GvmDeviceCoordinator
 from custom_components.gvm_800d.const import CMD_BRIGHTNESS, CMD_POWER
@@ -10,6 +12,7 @@ class FakeClient:
     def __init__(self):
         self.connected = False
         self.commands = []
+        self.disconnects = 0
         self.on_handshake = None
         self.on_state = None
 
@@ -27,6 +30,7 @@ class FakeClient:
 
     async def async_disconnect(self):
         self.connected = False
+        self.disconnects += 1
 
     async def send_command(self, cmd, value):
         self.commands.append((cmd, value))
@@ -49,6 +53,26 @@ async def test_connect_reads_handshake_and_state():
     assert coordinator.handshake["device_type"] == "31"
     assert coordinator.state["brightness"] == 50
     assert client.connected is True
+
+
+async def test_handshake_timeout_disconnects_client(monkeypatch):
+    coordinator, client = make_coordinator()
+
+    async def no_handshake():
+        client.connected = True
+
+    async def instant_timeout(awaitable, _timeout):
+        awaitable.close()
+        raise TimeoutError
+
+    client.async_connect = no_handshake
+    monkeypatch.setattr(gvm_integration.asyncio, "wait_for", instant_timeout)
+
+    with pytest.raises(Exception):
+        await coordinator.async_connect()
+
+    assert client.connected is False
+    assert client.disconnects == 1
 
 
 async def test_request_coalesces_same_command():

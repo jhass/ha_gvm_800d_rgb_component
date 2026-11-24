@@ -193,22 +193,16 @@ class GvmBleClient:
                 await asyncio.sleep(0.2)
 
     async def _send_raw(self, frame: str) -> None:
-        """Write a hex frame, chunking only oversized frames."""
+        """Write a hex frame as raw bytes with the app's 0xFF terminator."""
         if not self._connected or self._client is None:
             raise GvmBleError("not connected")
+        payload = bytes.fromhex(frame) + b"\xff"
         async with self._write_lock:
-            if len(frame) > 40:
-                chunks = [frame[index : index + 20] for index in range(0, len(frame), 20)]
-            else:
-                chunks = [frame]
-            for index, chunk in enumerate(chunks):
-                await self._client.write_gatt_char(
-                    CHARACTERISTIC_UUID,
-                    (chunk + "\r\n").encode("ascii"),
-                    response=True,
-                )
-                if index < len(chunks) - 1:
-                    await asyncio.sleep(0.2)
+            await self._client.write_gatt_char(
+                CHARACTERISTIC_UUID,
+                payload,
+                response=False,
+            )
 
     def _handle_notification(self, _sender: Any, data: bytearray) -> None:
         """Handle a GATT notification."""

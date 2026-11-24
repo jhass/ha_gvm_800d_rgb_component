@@ -71,11 +71,17 @@ class GvmDeviceCoordinator:
     async def async_connect(self) -> None:
         """Connect and wait for a valid handshake."""
         self._handshake_event.clear()
-        await self.client.async_connect()
         try:
+            await self.client.async_connect()
             await asyncio.wait_for(self._handshake_event.wait(), 10)
         except TimeoutError as err:
+            await self.client.async_disconnect()
+            self._available = False
             raise GvmBleError("handshake timeout") from err
+        except Exception:
+            await self.client.async_disconnect()
+            self._available = False
+            raise
         self._available = True
         self._notify_listeners()
 
